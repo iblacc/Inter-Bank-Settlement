@@ -1,25 +1,22 @@
 package com.queuepay.ibs.models;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.queuepay.ibs.dto.CardType;
-import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
-import java.util.Date;
-import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "cards")
 public class Card {
 
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private long id;
 
-    @Column(unique = true, updatable = false)
+    @Column(unique = true, updatable = false, length = 1000)
     @NotNull(message = "Must provide PAN")
     @NotBlank(message = "PAN mustn't be empty")
     private String PAN;
@@ -29,23 +26,24 @@ public class Card {
     private String name;
 
     @NotNull(message = "Must provide card type")
-    @NotBlank(message = "Card type mustn't be empty")
+//    @NotBlank(message = "Card type mustn't be empty")
     @Column(name = "card_type")
     private CardType cardType;
 
     @NotNull(message = "Must provide CVV")
     @NotBlank(message = "CVV mustn't be empty")
-    @Size(min = 3, max = 3)
+    @Column(length = 1000)
     private String CVV;
 
     @NotNull(message = "Must provide pin")
     @NotBlank(message = "Pin mustn't be empty")
-    @Size(min = 4, max = 4)
+    @Column(length = 1000)
     private String pin;
 
     @NotNull(message = "Must provide expiry date")
     @NotBlank(message = "Expiry date mustn't be empty")
-    private Date expiryDate;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy")
+    private LocalDateTime expiryDate;
 
     @OneToOne
     @JoinColumn(name = "bank_id")
@@ -54,11 +52,11 @@ public class Card {
     public Card() {
     }
 
-    public UUID getId() {
+    public long getId() {
         return id;
     }
 
-    public void setId(UUID id) {
+    public void setId(long id) {
         this.id = id;
     }
 
@@ -102,11 +100,11 @@ public class Card {
         this.pin = pin;
     }
 
-    public Date getExpiryDate() {
+    public LocalDateTime getExpiryDate() {
         return expiryDate;
     }
 
-    public void setExpiryDate(Date expiryDate) {
+    public void setExpiryDate(LocalDateTime expiryDate) {
         this.expiryDate = expiryDate;
     }
 
