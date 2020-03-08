@@ -1,20 +1,16 @@
 package com.queuepay.ibs.models;
 
-import org.hibernate.annotations.GenericGenerator;
-
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
-import java.util.UUID;
 
 @Entity
 @Table(name = "payment_gateways")
 public class PaymentGateway {
 
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private int id;
 
     @NotNull(message = "Must provide name")
     @NotBlank(message = "Name mustn't be empty")
@@ -23,7 +19,7 @@ public class PaymentGateway {
 
     @NotNull(message = "Must provide secret key")
     @NotBlank(message = "Secret key mustn't be empty")
-    @Column(name = "secret_key")
+    @Column(name = "secret_key", length = 1000)
     private String secretKey;
 
     @OneToOne
@@ -38,11 +34,11 @@ public class PaymentGateway {
     public PaymentGateway() {
     }
 
-    public UUID getId() {
+    public int getId() {
         return id;
     }
 
-    public void setId(UUID id) {
+    public void setId(int id) {
         this.id = id;
     }
 
