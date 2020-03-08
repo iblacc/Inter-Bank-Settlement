@@ -1,6 +1,8 @@
 package com.queuepay.ibs.dto;
 
-import java.util.Date;
+import com.fasterxml.jackson.annotation.JsonFormat;
+
+import java.time.LocalDateTime;
 
 public class CardValidation {
 
@@ -9,9 +11,10 @@ public class CardValidation {
     private CardType cardType;
     private String CVV;
     private String pin;
-    private Date expiryDate;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy")
+    private LocalDateTime expiryDate;
 
-    public CardValidation(String PAN, String name, CardType cardType, String CVV, String pin, Date expiryDate) {
+    public CardValidation(String PAN, String name, CardType cardType, String CVV, String pin, LocalDateTime expiryDate) {
         this.PAN = PAN;
         this.name = name;
         this.cardType = cardType;
@@ -63,11 +66,11 @@ public class CardValidation {
         this.pin = pin;
     }
 
-    public Date getExpiryDate() {
+    public LocalDateTime getExpiryDate() {
         return expiryDate;
     }
 
-    public void setExpiryDate(Date expiryDate) {
+    public void setExpiryDate(LocalDateTime expiryDate) {
         this.expiryDate = expiryDate;
     }
 }
