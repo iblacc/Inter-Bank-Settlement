@@ -1,23 +1,21 @@
 package com.queuepay.ibs.models;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.queuepay.ibs.dto.Status;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
-import java.sql.Timestamp;
-import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "transactions")
 public class Transaction {
 
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private long id;
 
     @OneToOne
     @JoinColumn(name = "sending_bank")
@@ -26,6 +24,11 @@ public class Transaction {
     @OneToOne
     @JoinColumn(name = "receiving_bank")
     private Bank receivingBank;
+
+    @NotBlank
+    @NotBlank
+    @Column(name = "sender_name")
+    private String senderName;
 
     @NotBlank
     @NotBlank
@@ -41,16 +44,17 @@ public class Transaction {
     private Status status;
 
     @CreationTimestamp
-    private Timestamp date;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy hh:mm:ss")
+    private LocalDateTime date;
 
     public Transaction() {
     }
 
-    public UUID getId() {
+    public long getId() {
         return id;
     }
 
-    public void setId(UUID id) {
+    public void setId(long id) {
         this.id = id;
     }
 
@@ -68,6 +72,14 @@ public class Transaction {
 
     public void setReceivingBank(Bank receivingBank) {
         this.receivingBank = receivingBank;
+    }
+
+    public String getSenderName() {
+        return senderName;
+    }
+
+    public void setSenderName(String senderName) {
+        this.senderName = senderName;
     }
 
     public String getSenderAccount() {
@@ -94,11 +106,11 @@ public class Transaction {
         this.status = status;
     }
 
-    public Timestamp getDate() {
+    public LocalDateTime getDate() {
         return date;
     }
 
-    public void setDate(Timestamp date) {
+    public void setDate(LocalDateTime date) {
         this.date = date;
     }
 }
