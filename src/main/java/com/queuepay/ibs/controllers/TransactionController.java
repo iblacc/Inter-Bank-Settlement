@@ -46,10 +46,4 @@ public class TransactionController {
 
         return transactionService.enableTransaction(email, secretKey, token);
     }
-
-
-    @GetMapping("/data")
-    public void addBanks() {
-        transactionService.createData();
-    }
 }

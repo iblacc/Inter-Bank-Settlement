@@ -45,7 +45,7 @@ public class CardService {
 
         System.out.println(card.getCardType());
         card.setBank(bank.get());
-        card.setPAN(hash(card.getPAN()));
+        card.setPAN(card.getPAN());
         card.setPin(hash(card.getPin()));
         card.setCVV(hash(card.getCVV()));
         cardRepository.save(card);

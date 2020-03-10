@@ -1,7 +1,7 @@
 package com.queuepay.ibs.dto;
 
 public class Token {
-    private String OTP;
+    private String otp;
     private String accountDetail;
     private double amount;
     private boolean isCard;
@@ -12,7 +12,7 @@ public class Token {
     }
 
     public String getOTP() {
-        return OTP;
+        return otp;
     }
 
     public double getAmount() {
@@ -24,7 +24,7 @@ public class Token {
     }
 
     public void setOTP(String OTP) {
-        this.OTP = OTP;
+        this.otp = OTP;
     }
 
     public void setAccountDetail(String accountDetail) {
@@ -50,7 +50,7 @@ public class Token {
     @Override
     public String toString() {
         return "Token{" +
-                "OTP='" + OTP + '\'' +
+                "OTP='" + otp + '\'' +
                 ", accountDetail='" + accountDetail + '\'' +
                 ", amount=" + amount +
                 ", isCard=" + isCard +

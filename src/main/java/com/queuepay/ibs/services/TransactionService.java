@@ -50,6 +50,7 @@ public class TransactionService {
         Card validatedCard = validateCard(card);
 
         if(validatedCard != null) {
+            System.out.println(validatedCard.getBank().getEndpoint());
             HashMap<String, String> payload = new HashMap<>();
             payload.put("PAN", validatedCard.getPAN());
 
@@ -169,13 +170,20 @@ public class TransactionService {
     private Card validateCard(CardDTO cardToFind) {
         Optional<Card> foundCard = cardRepository.findByPAN(cardToFind.getPAN());
 
+        System.out.println(cardToFind.getPAN());
+
         if(foundCard.isPresent()) {
             Card card = foundCard.get();
             boolean validPin = BCrypt.checkpw(cardToFind.getPin(), card.getPin());
             boolean validCVV = BCrypt.checkpw(cardToFind.getCVV(), card.getCVV());
 
+            if(validPin) System.out.println("Correct pin");
+            if(validCVV) System.out.println("Correct cvv");
+
             return (validPin && validCVV) ? foundCard.get() : null;
         }
+
+        System.out.println("Not found");
 
         return null;
     }
