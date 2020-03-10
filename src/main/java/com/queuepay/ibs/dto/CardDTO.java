@@ -1,37 +1,35 @@
 package com.queuepay.ibs.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
+import java.util.Date;
 
-import java.time.LocalDateTime;
+public class CardDTO {
 
-public class CardValidation {
-
-    private String PAN;
+    private String pan;
     private String name;
     private CardType cardType;
-    private String CVV;
+    private String cvv;
     private String pin;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy")
-    private LocalDateTime expiryDate;
+//    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy hh:mm:ss")
+    private Date expiryDate;
 
-    public CardValidation(String PAN, String name, CardType cardType, String CVV, String pin, LocalDateTime expiryDate) {
-        this.PAN = PAN;
+    public CardDTO(String pan, String name, CardType cardType, String cvv, String pin, Date expiryDate) {
+        this.pan = pan;
         this.name = name;
         this.cardType = cardType;
-        this.CVV = CVV;
+        this.cvv = cvv;
         this.pin = pin;
         this.expiryDate = expiryDate;
     }
 
-    public CardValidation() {
+    public CardDTO() {
     }
 
     public String getPAN() {
-        return PAN;
+        return pan;
     }
 
     public void setPAN(String PAN) {
-        this.PAN = PAN;
+        this.pan = PAN;
     }
 
     public String getName() {
@@ -51,11 +49,11 @@ public class CardValidation {
     }
 
     public String getCVV() {
-        return CVV;
+        return cvv;
     }
 
     public void setCVV(String CVV) {
-        this.CVV = CVV;
+        this.cvv = CVV;
     }
 
     public String getPin() {
@@ -66,11 +64,11 @@ public class CardValidation {
         this.pin = pin;
     }
 
-    public LocalDateTime getExpiryDate() {
+    public Date getExpiryDate() {
         return expiryDate;
     }
 
-    public void setExpiryDate(LocalDateTime expiryDate) {
+    public void setExpiryDate(Date expiryDate) {
         this.expiryDate = expiryDate;
     }
 }

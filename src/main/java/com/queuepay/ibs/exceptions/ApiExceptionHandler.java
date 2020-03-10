@@ -1,6 +1,7 @@
 package com.queuepay.ibs.exceptions;
 
 import com.queuepay.ibs.errorResponse.RequestError;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import javax.persistence.EntityNotFoundException;
+import javax.validation.ConstraintViolationException;
 
 import static org.springframework.http.HttpStatus.*;
 
@@ -63,6 +65,22 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleEntityNotFound(
             EntityNotFoundException ex) {
         RequestError error = new RequestError(NOT_FOUND);
+        error.setMessage(ex.getMessage());
+        return buildResponseEntity(error);
+    }
+
+    @ExceptionHandler(EmptyResultDataAccessException.class)
+    protected ResponseEntity<Object> handleEmptyResultDataAccess(
+            EmptyResultDataAccessException ex) {
+        RequestError error = new RequestError(NOT_FOUND);
+        error.setMessage(ex.getMessage());
+        return buildResponseEntity(error);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    protected ResponseEntity<Object> handleConstraintViolation(
+            ConstraintViolationException ex) {
+        RequestError error = new RequestError(UNPROCESSABLE_ENTITY);
         error.setMessage(ex.getMessage());
         return buildResponseEntity(error);
     }

@@ -9,13 +9,18 @@ import javax.validation.constraints.NotNull;
 public class PaymentGateway {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
     @NotNull(message = "Must provide name")
     @NotBlank(message = "Name mustn't be empty")
     @Column(unique = true)
     private String name;
+
+    @NotNull(message = "Must provide email")
+    @NotBlank(message = "Email mustn't be empty")
+    @Column(unique = true)
+    private String email;
 
     @NotNull(message = "Must provide secret key")
     @NotBlank(message = "Secret key mustn't be empty")
@@ -72,5 +77,13 @@ public class PaymentGateway {
 
     public void setAccountNumber(String accountNumber) {
         this.accountNumber = accountNumber;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 }

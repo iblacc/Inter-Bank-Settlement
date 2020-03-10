@@ -1,7 +1,7 @@
 package com.queuepay.ibs;
 
 import com.queuepay.ibs.dto.Account;
-import com.queuepay.ibs.dto.CardValidation;
+import com.queuepay.ibs.dto.CardDTO;
 import com.queuepay.ibs.dto.Token;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -32,8 +32,8 @@ public class IbsApplication {
     }
 
     @Bean
-    public CardValidation cardValidation() {
-        return new CardValidation();
+    public CardDTO cardValidation() {
+        return new CardDTO();
     }
 
     @Bean

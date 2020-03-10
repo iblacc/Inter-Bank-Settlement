@@ -14,14 +14,14 @@ import java.time.LocalDateTime;
 public class Transaction {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "sending_bank")
     private Bank sendingBank;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "receiving_bank")
     private Bank receivingBank;
 

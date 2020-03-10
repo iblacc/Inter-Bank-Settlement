@@ -1,22 +1,20 @@
 package com.queuepay.ibs.services;
 
-import com.queuepay.ibs.dto.Account;
-import com.queuepay.ibs.dto.CardValidation;
-import com.queuepay.ibs.dto.Status;
-import com.queuepay.ibs.dto.Token;
+import com.queuepay.ibs.dto.*;
 import com.queuepay.ibs.exceptions.CustomException;
 import com.queuepay.ibs.models.Bank;
 import com.queuepay.ibs.models.Card;
 import com.queuepay.ibs.models.PaymentGateway;
 import com.queuepay.ibs.models.Transaction;
-import com.queuepay.ibs.repositories.GatewayRepository;
 import com.queuepay.ibs.repositories.BankRepository;
 import com.queuepay.ibs.repositories.CardRepository;
+import com.queuepay.ibs.repositories.GatewayRepository;
 import com.queuepay.ibs.repositories.TransactionRepository;
 import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import javax.persistence.EntityNotFoundException;
@@ -27,28 +25,28 @@ import java.util.Optional;
 @Service
 public class TransactionService {
 
-    private GatewayRepository authRepository;
+    private GatewayRepository gatewayRepository;
     private CardRepository cardRepository;
     private RestTemplate restTemplate;
     private BankRepository bankRepository;
     private TransactionRepository transactionRepository;
 
     @Autowired
-    public TransactionService(GatewayRepository authRepository,
+    public TransactionService(GatewayRepository gatewayRepository,
                               CardRepository cardRepository,
                               RestTemplate restTemplate,
                               BankRepository bankRepository,
                               TransactionRepository transactionRepository) {
-        this.authRepository = authRepository;
+        this.gatewayRepository = gatewayRepository;
         this.cardRepository = cardRepository;
         this.restTemplate = restTemplate;
         this.bankRepository = bankRepository;
         this.transactionRepository = transactionRepository;
     }
 
-    public ResponseEntity<Object> validate(String name, String secretKey, CardValidation card) {
+    public ResponseEntity<Object> validate(String email, String secretKey, CardDTO card) {
 
-        authenticateGateway(name, secretKey);
+        authenticateGateway(email, secretKey);
         Card validatedCard = validateCard(card);
 
         if(validatedCard != null) {
@@ -61,10 +59,10 @@ public class TransactionService {
         throw new CustomException(HttpStatus.NOT_ACCEPTABLE, "Invalid card provided");
     }
 
-    public ResponseEntity<Object> validate(String name, String secretKey, Account account) {
+    public ResponseEntity<Object> validate(String email, String secretKey, Account account) {
 
-        authenticateGateway(name, secretKey);
-        Optional<Bank> bank = bankRepository.findByCBNCode(account.getBankCBNCode());
+        authenticateGateway(email, secretKey);
+        Optional<Bank> bank = bankRepository.findByCbnCode(account.getBankCBNCode());
 
         if(bank.isEmpty()) {
             throw new CustomException(HttpStatus.NOT_ACCEPTABLE, "Invalid account details provided");
@@ -76,66 +74,82 @@ public class TransactionService {
     }
 
 
-    public ResponseEntity<Object> enableTransaction(String name, String secretKey, Token token) {
-        PaymentGateway gateway = authenticateGateway(name, secretKey);
+    public ResponseEntity<Object> enableTransaction(String email, String secretKey, Token token) {
+        PaymentGateway gateway = authenticateGateway(email, secretKey);
 
         HashMap<String, String> payload = new HashMap<>();
         payload.put("OTP", token.getOTP());
         payload.put("account-detail", token.getAccountDetail());
         payload.put("amount", token.getAmount() + "");
-        ResponseEntity<Object> responseEntity = sendTransactionDetails(payload, getEndpoint(token) + "/debit");
 
-        HttpStatus debitStatus = responseEntity.getStatusCode();
-        HashMap<String, String> responseBody = (HashMap<String, String>) responseEntity.getBody();
-        String responseMessage = "";
 
         Transaction transaction = new Transaction();
         Bank sendingBank;
+        Bank receivingBank = gateway.getBank();
+        HttpStatus responseStatus;
+        String responseMessage = "";
 
         if (token.isCard()) {
             Card card = cardRepository.findByPAN(token.getAccountDetail()).get();
             sendingBank = card.getBank();
         } else {
-            sendingBank = bankRepository.findByCBNCode(token.getBankCBNCode()).get();
+            sendingBank = bankRepository.findByCbnCode(token.getBankCBNCode()).get();
         }
-
-        Bank receivingBank = gateway.getBank();
-
         transaction.setSendingBank(sendingBank);
         transaction.setReceivingBank(receivingBank);
-        transaction.setSenderName(responseBody.get("name"));
-        transaction.setSenderAccount(responseBody.get("account-number"));
         transaction.setReceiverAccount(gateway.getAccountNumber());
 
-        HttpStatus responseStatus;
+        try {
 
-        if(debitStatus.equals(HttpStatus.OK)) {
-            transaction.setStatus(Status.PENDING);
-            responseStatus = HttpStatus.OK;
+            ResponseEntity<Object> responseEntity = sendTransactionDetails(payload, getEndpoint(token) + "/debit");
 
-            transactionRepository.save(transaction);
-            responseMessage = "Transaction pending";
+            HashMap<String, String> responseBody = (HashMap<String, String>) responseEntity.getBody();
+
+            assert responseBody != null;
+            transaction.setSenderName(responseBody.get("name"));
+            transaction.setSenderAccount(responseBody.get("account-number"));
 
             payload.remove("OTP");
             payload.put("account-detail", gateway.getAccountNumber());
-            HttpStatus creditStatus = sendTransactionDetails(payload, gateway.getBank().getEndpoint() + "/credit").getStatusCode();
-            if(creditStatus.equals(HttpStatus.OK)) {
-                transaction.setStatus(Status.SUCCESSFUL);
-                transactionRepository.save(transaction);
-                responseMessage = "Transaction successful";
-            }
-        } else {
-            transaction.setStatus(Status.FAILED);
+
+            sendTransactionDetails(payload, gateway.getBank().getEndpoint() + "/credit");
+            transaction.setStatus(Status.SUCCESSFUL);
+            responseStatus = HttpStatus.OK;
             transactionRepository.save(transaction);
-            responseMessage = "Transaction failed";
-            responseStatus = HttpStatus.FORBIDDEN;
+            responseMessage = "Transaction successful";
+
+
+
+        } catch (HttpStatusCodeException ex) {
+
+            String[] responseBody = ex.getResponseBodyAsString().split(" ");
+            transaction.setSenderName(responseBody[0]);
+            transaction.setSenderAccount(responseBody[1]);
+
+            if(ex.getStatusCode().equals(HttpStatus.FAILED_DEPENDENCY)) {
+                transaction.setStatus(Status.FAILED);
+                responseStatus = HttpStatus.FAILED_DEPENDENCY;
+                responseMessage = "Insufficient fund, transaction failed";
+            } else if(ex.getStatusCode().equals(HttpStatus.EXPECTATION_FAILED)) {
+                payload.put("account-detail", token.getAccountDetail());
+                sendTransactionDetails(payload, getEndpoint(token) + "/credit");
+                transaction.setStatus(Status.FAILED);
+                responseStatus = HttpStatus.EXPECTATION_FAILED;
+                responseMessage = "Incorrect merchant account number, transaction failed.";
+            } else {
+                responseStatus = HttpStatus.NOT_ACCEPTABLE;
+                responseMessage = "Transaction failed.";
+                transaction.setStatus(Status.FAILED);
+            }
         }
+
+        transactionRepository.save(transaction);
 
         return new ResponseEntity<>(responseMessage, responseStatus);
     }
 
-    private PaymentGateway authenticateGateway(String name, String secretKey) {
-        Optional<PaymentGateway> foundGateway = authRepository.findByName(name);
+    private PaymentGateway authenticateGateway(String email, String secretKey) {
+        Optional<PaymentGateway> foundGateway = gatewayRepository.findByEmail(email);
 
         if(foundGateway.isPresent()) {
             PaymentGateway gateway = foundGateway.get();
@@ -149,10 +163,10 @@ public class TransactionService {
             return gateway;
         }
 
-        throw new EntityNotFoundException(String.format("Payment gateway with the name {%s} was not found.", name));
+        throw new EntityNotFoundException(String.format("Payment gateway with the email {%s} was not found.", email));
     }
 
-    private Card validateCard(CardValidation cardToFind) {
+    private Card validateCard(CardDTO cardToFind) {
         Optional<Card> foundCard = cardRepository.findByPAN(cardToFind.getPAN());
 
         if(foundCard.isPresent()) {
@@ -175,7 +189,7 @@ public class TransactionService {
             throw new CustomException(HttpStatus.NOT_ACCEPTABLE, "Invalid card PAN provided");
         }
 
-        Optional<Bank> bank = bankRepository.findByCBNCode(token.getBankCBNCode());
+        Optional<Bank> bank = bankRepository.findByCbnCode(token.getBankCBNCode());
         if(bank.isPresent()) {
             return bank.get().getEndpoint();
         }
@@ -192,43 +206,8 @@ public class TransactionService {
                 url, HttpMethod.POST, entity, Object.class);
     }
 
-//    private Bank getGatewayBank(String name) {
-//        PaymentGateway paymentGateway = authRepository.findByName(name).get();
-//        return paymentGateway.getBank();
-//    }
-
-    public void createData() {
-//        Bank bank = new Bank();
-////
-//        bank.setShortCode("GTB");
-//        bank.setCBNCode("0123");
-//        bank.setName("Guaranty Trust Bank");
-//        bankRepository.save(bank);
-
-//        Bank bank = bankRepository.findByName("Guaranty Trust Bank").get();
-//        bank.setCBNCode("22222");
-//        bankRepository.save(bank);
-//        Card card = new Card();
-//        card.setBank(bankRepository.findByName("Guaranty Trust Bank").get());
-//        card.setName("Garba Isah");
-//        card.setCardType(CardType.MASTERCARD);
-//        card.setCVV(hash("212"));
-//        card.setPAN(hash("2222990905257051"));
-//        card.setPin(hash("1112"));
-//        card.setExpiryDate("2022-04-12");
-//        cardRepository.save(card);
-//
-//
-//        PaymentGateway gateway = new PaymentGateway();
-//        gateway.setName("QueuePay");
-//        gateway.setAccountNumber("1200020100");
-//        gateway.setBank(bankRepository.findByName("Guaranty Trust Bank").get());
-//        gateway.setSecretKey(hash("43RFVFRHIHhI9Hg8YHgy8GgHgNBgk9"));
-//        authRepository.save(gateway);
-    }
-
     private String hash(String secret) {
         return BCrypt.hashpw(secret, BCrypt.gensalt(11));
     }
-    // BCrypt.hashpw(password, BCrypt.gensalt(11));
+
 }

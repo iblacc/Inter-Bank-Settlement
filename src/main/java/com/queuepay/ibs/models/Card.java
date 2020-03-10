@@ -1,22 +1,21 @@
 package com.queuepay.ibs.models;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.queuepay.ibs.dto.CardType;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
-import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity
 @Table(name = "cards")
 public class Card {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    @Column(unique = true, updatable = false, length = 1000)
+    @Column(name = "pan", unique = true, updatable = false, length = 1000)
     @NotNull(message = "Must provide PAN")
     @NotBlank(message = "PAN mustn't be empty")
     private String PAN;
@@ -32,7 +31,7 @@ public class Card {
 
     @NotNull(message = "Must provide CVV")
     @NotBlank(message = "CVV mustn't be empty")
-    @Column(length = 1000)
+    @Column(name = "cvv", length = 1000)
     private String CVV;
 
     @NotNull(message = "Must provide pin")
@@ -41,11 +40,12 @@ public class Card {
     private String pin;
 
     @NotNull(message = "Must provide expiry date")
-    @NotBlank(message = "Expiry date mustn't be empty")
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy")
-    private LocalDateTime expiryDate;
+//    @NotBlank(message = "Expiry date mustn't be empty")
+//    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy")
+    @Column(name = "expiry_date")
+    private Date expiryDate;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "bank_id")
     private Bank bank;
 
@@ -100,11 +100,11 @@ public class Card {
         this.pin = pin;
     }
 
-    public LocalDateTime getExpiryDate() {
+    public Date getExpiryDate() {
         return expiryDate;
     }
 
-    public void setExpiryDate(LocalDateTime expiryDate) {
+    public void setExpiryDate(Date expiryDate) {
         this.expiryDate = expiryDate;
     }
 

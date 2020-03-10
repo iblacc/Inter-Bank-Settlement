@@ -27,11 +27,11 @@ public class Bank {
     @NotNull(message = "Must provide CBN code")
     @NotBlank(message = "CBN code mustn't be empty")
     @Column(name = "CBN_code", unique = true, updatable = false)
-    private String CBNCode;
+    private String cbnCode;
 
     @NotNull(message = "Must provide endpoint")
     @NotBlank(message = "Endpoint mustn't be empty")
-    @Column(unique = true)
+    @Column(unique = true, updatable = true)
     private String endpoint;
 
     public Bank() {
@@ -61,12 +61,12 @@ public class Bank {
         this.shortCode = shortCode;
     }
 
-    public String getCBNCode() {
-        return CBNCode;
+    public String getCbnCode() {
+        return cbnCode;
     }
 
-    public void setCBNCode(String CBNCode) {
-        this.CBNCode = CBNCode;
+    public void setCbnCode(String CBNCode) {
+        this.cbnCode = CBNCode;
     }
 
     public String getEndpoint() {
@@ -75,5 +75,16 @@ public class Bank {
 
     public void setEndpoint(String endpoint) {
         this.endpoint = endpoint;
+    }
+
+    @Override
+    public String toString() {
+        return "Bank{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", shortCode='" + shortCode + '\'' +
+                ", cbnCode='" + cbnCode + '\'' +
+                ", endpoint='" + endpoint + '\'' +
+                '}';
     }
 }
