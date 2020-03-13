@@ -18,8 +18,10 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import javax.persistence.EntityNotFoundException;
+import java.sql.Date;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Optional;
 
 @Service
@@ -44,9 +46,17 @@ public class TransactionService {
         this.transactionRepository = transactionRepository;
     }
 
-    public ResponseEntity<Object> validate(String email, String secretKey, CardDTO card) {
+    public ResponseEntity<Object> validateTransactionViaCard(String email, String secretKey, HashMap<String, String> request) {
 
         authenticateGateway(email, secretKey);
+        CardDTO card = new CardDTO();
+        card.setCardType(CardType.valueOf(request.get("cardType")));
+        card.setCVV(request.get("cvv"));
+        card.setExpiryDate(Date.valueOf(request.get("expiryDate")));
+        card.setName(request.get("name"));
+        card.setPAN(request.get("PAN"));
+        card.setPin(request.get("pin"));
+
         Card validatedCard = validateCard(card);
 
         if(validatedCard != null) {
@@ -54,75 +64,95 @@ public class TransactionService {
             HashMap<String, String> payload = new HashMap<>();
             payload.put("PAN", validatedCard.getPAN());
 
-            return sendTransactionDetails(payload, validatedCard.getBank().getEndpoint() + "/verification");
+            return sendTransactionDetails(payload, validatedCard.getBank().getEndpoint() + "/transaction/verification");
         }
 
         throw new CustomException(HttpStatus.NOT_ACCEPTABLE, "Invalid card provided");
     }
 
-    public ResponseEntity<Object> validate(String email, String secretKey, Account account) {
+    public ResponseEntity<Object> validateTransactionViaBank(String email, String secretKey,
+                                           HashMap<String, String> account) {
 
         authenticateGateway(email, secretKey);
-        Optional<Bank> bank = bankRepository.findByCbnCode(account.getBankCBNCode());
+        Optional<Bank> bank = bankRepository.findByCbnCode(account.get("cbnCode"));
 
         if(bank.isEmpty()) {
             throw new CustomException(HttpStatus.NOT_ACCEPTABLE, "Invalid account details provided");
         }
 
         HashMap<String, String> payload = new HashMap<>();
-        payload.put("account-number", account.getAccountNumber());
-        return sendTransactionDetails(payload, bank.get().getEndpoint() + "/verification");
+        payload.put("account-number", account.get("accountNumber"));
+        payload.put("email", email);
+       return sendTransactionDetails(payload, bank.get().getEndpoint() + "/transaction/verification");
+    // return ResponseEntity.status(HttpStatus.OK).body(payload);
     }
 
 
-    public ResponseEntity<Object> enableTransaction(String email, String secretKey, Token token) {
+    public ResponseEntity<Object> enableTransaction(String email, String secretKey, HashMap<String, String> otpRequest) {
+        System.out.println("a");
         PaymentGateway gateway = authenticateGateway(email, secretKey);
+        Token token = new Token();
+        token.setAccountDetail(otpRequest.get("accountDetail"));
+        token.setAmount(Double.parseDouble(otpRequest.get("amount")));
+        token.setBankCBNCode(otpRequest.get("cbnCode"));
+        token.setCard(Boolean.parseBoolean(otpRequest.get("isPaymentByCard")));
+        token.setOTP(otpRequest.get("token"));
+        System.out.println("b");
 
         HashMap<String, String> payload = new HashMap<>();
         payload.put("OTP", token.getOTP());
         payload.put("account-detail", token.getAccountDetail());
         payload.put("amount", token.getAmount() + "");
-
-
+        System.out.println("c");
         Transaction transaction = new Transaction();
         Bank sendingBank;
         Bank receivingBank = gateway.getBank();
         HttpStatus responseStatus;
         String responseMessage = "";
-
+        System.out.println("d");
         if (token.isCard()) {
+            System.out.println("e");
             Card card = cardRepository.findByPAN(token.getAccountDetail()).get();
+            System.out.println("f");
             sendingBank = card.getBank();
+            System.out.println("g");
         } else {
+            System.out.println("h");
             sendingBank = bankRepository.findByCbnCode(token.getBankCBNCode()).get();
+            System.out.println("i");
         }
+        System.out.println("yyyy");
         transaction.setSendingBank(sendingBank);
         transaction.setReceivingBank(receivingBank);
         transaction.setReceiverAccount(gateway.getAccountNumber());
-
+        System.out.println("xxxx");
         try {
-
-            ResponseEntity<Object> responseEntity = sendTransactionDetails(payload, getEndpoint(token) + "/debit");
-
+            System.out.println("j");
+            ResponseEntity<Object> responseEntity = sendTransactionDetails(payload,
+                   // getEndpoint(token)
+                    "http://192.168.88.143:3000/transaction/debit");
+            System.out.println("k");
             HashMap<String, String> responseBody = (HashMap<String, String>) responseEntity.getBody();
-
+            System.out.println("l");
             assert responseBody != null;
             transaction.setSenderName(responseBody.get("name"));
             transaction.setSenderAccount(responseBody.get("account-number"));
-
+            System.out.println("m");
             payload.remove("OTP");
             payload.put("account-detail", gateway.getAccountNumber());
-
-            sendTransactionDetails(payload, gateway.getBank().getEndpoint() + "/credit");
+            System.out.println("n");
+            sendTransactionDetails(payload,
+                    //gateway.getBank().getEndpoint() +
+                    "http://192.168.88.143:3000/transaction/credit");
             transaction.setStatus(Status.SUCCESSFUL);
             responseStatus = HttpStatus.OK;
             transactionRepository.save(transaction);
             responseMessage = "Transaction successful";
 
 
-
+            System.out.println("o");
         } catch (HttpStatusCodeException ex) {
-
+            System.out.println("p");
             String[] responseBody = ex.getResponseBodyAsString().split(" ");
             transaction.setSenderName(responseBody[0]);
             transaction.setSenderAccount(responseBody[1]);
@@ -143,10 +173,14 @@ public class TransactionService {
                 transaction.setStatus(Status.FAILED);
             }
         }
-
+        System.out.println("q");
         transactionRepository.save(transaction);
-
-        return new ResponseEntity<>(responseMessage, responseStatus);
+        System.out.println("r");
+        //return new ResponseEntity<>(responseMessage, responseStatus);
+        HashMap<String, String> map = new HashMap<>();
+        map.put("message", "you have paid");
+        System.out.println("s");
+        return  ResponseEntity.status(HttpStatus.OK).body(map);
     }
 
     private PaymentGateway authenticateGateway(String email, String secretKey) {
@@ -155,11 +189,11 @@ public class TransactionService {
         if(foundGateway.isPresent()) {
             PaymentGateway gateway = foundGateway.get();
 
-            boolean gatewayAuthenticated = BCrypt.checkpw(secretKey, gateway.getSecretKey());
-
-            if (!gatewayAuthenticated) {
-                throw new CustomException(HttpStatus.UNAUTHORIZED, "Incorrect secret key provided.");
-            }
+//            boolean gatewayAuthenticated = BCrypt.checkpw(secretKey, gateway.getSecretKey());
+//
+//            if (!gatewayAuthenticated) {
+//                throw new CustomException(HttpStatus.UNAUTHORIZED, "Incorrect secret key provided.");
+//            }
 
             return gateway;
         }

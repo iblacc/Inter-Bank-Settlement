@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+
 @RestController
 @RequestMapping("transaction")
 public class TransactionController {
@@ -23,26 +25,26 @@ public class TransactionController {
     }
 
     @PostMapping("/card")
-    public ResponseEntity<Object> validateCard(@RequestHeader("email") String email,
+    public ResponseEntity<Object> validateTransactionViaCard(@RequestHeader("email") String email,
                                                @RequestHeader("secret-key") String secretKey,
-                                               @RequestBody CardDTO card) {
+                                               @RequestBody HashMap<String,String> card) {
 //        CardValidation cardValidation = modelMapper.map(card, CardValidation.class);
 
         System.out.println(card.toString());
-        return transactionService.validate(email, secretKey, card);
+        return transactionService.validateTransactionViaCard(email, secretKey, card);
     }
     @PostMapping("/account")
-    public ResponseEntity<Object> validateCard(@RequestHeader("email") String email,
+    public ResponseEntity<Object> validateTransactionViaBank(@RequestHeader("email") String email,
                                                @RequestHeader("secret-key") String secretKey,
-                                               @RequestBody Account account) {
+                                               @RequestBody HashMap<String, String> account) {
 
-        return transactionService.validate(email, secretKey, account);
+        return transactionService.validateTransactionViaBank(email, secretKey, account);
     }
 
     @PostMapping("/token")
     public ResponseEntity<Object> enableTransaction(@RequestHeader("email") String email,
                                                @RequestHeader("secret-key") String secretKey,
-                                               @RequestBody Token token) {
+                                               @RequestBody HashMap<String, String> token) {
 
         return transactionService.enableTransaction(email, secretKey, token);
     }

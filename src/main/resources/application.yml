@@ -5,8 +5,8 @@ spring:
       ddl-auto: update
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/inter_bank?createDatabaseIfNotExist=true&useTimezone=true&serverTimezone=UTC
-    username: ibs
-    password: password
+    username: root
+    password: 10million
 server:
   servlet:
     context-path: /api/v1
